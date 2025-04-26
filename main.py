@@ -1,11 +1,24 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import yt_dlp
 import os
 import requests
 
+# 🔥 Create folders if missing
+os.makedirs("static/audio", exist_ok=True)
+
 app = FastAPI()
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
