@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-yt-dlp
-python-multipart
-aiofiles
+pytube
 requests
+ffmpeg-python
