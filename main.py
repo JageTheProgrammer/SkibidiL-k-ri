@@ -64,6 +64,7 @@ def fetch_youtube_data(query, retries=3, delay=5):
             if e.response.status_code == 429:  # Too many requests
                 print(f"Rate limit exceeded. Retrying in {delay} seconds...")
                 time.sleep(delay)  # Wait before retrying
+                delay *= 2  # Exponential backoff
             else:
                 raise  # Re-raise other HTTP errors
     return None  # Return None if all retries fail
