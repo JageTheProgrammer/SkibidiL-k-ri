@@ -1,11 +1,12 @@
 import os
 import time
 import threading
-from flask import Flask, request, jsonify, send_file, abort
+from flask import Flask, request, jsonify, send_file, abort, CORS
 from pytube import Search, YouTube
 from pydub import AudioSegment
 
 app = Flask(__name__)
+CORS(app)
 DOWNLOAD_FOLDER = "downloads"
 
 # Create download folder if not exists
