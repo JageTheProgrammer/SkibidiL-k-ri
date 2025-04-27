@@ -88,6 +88,9 @@ def download_audio(video_url, video_id):
         os.remove(temp_path)
 
     return final_path
+ except Exception as e:
+        print(f"Error downloading audio: {e}")
+        raise  # Re-raise the exception to trigger a 500 error response
 
 @app.get("/search")
 def search_music(query: str):
