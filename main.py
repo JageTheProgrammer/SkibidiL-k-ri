@@ -50,7 +50,7 @@ def clean_old_audio_files():
 # Start cleaner
 threading.Thread(target=clean_old_audio_files, daemon=True).start()
 
-YOUTUBE_API_KEY = "YOUR_API_KEY_HERE"  # <--- put your key here
+YOUTUBE_API_KEY = "AIzaSyCPwlgw_CQuTHmjUkfeXutcnf54Wl9nNs8"  # <--- put your key here
 
 # 🎵 Function to download audio using pytube
 def download_audio(video_url, video_id):
