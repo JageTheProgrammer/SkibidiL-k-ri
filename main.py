@@ -1,12 +1,14 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import yt_dlp
 import os
 import requests
 import time
 import threading
+from pytube import YouTube  # 🚀 Use pytube now
+import ffmpeg  # 🔥 New import
+
 
 # 🔥 Create folders if missing
 os.makedirs("static/audio", exist_ok=True)
@@ -48,7 +50,28 @@ def clean_old_audio_files():
 # Start cleaner
 threading.Thread(target=clean_old_audio_files, daemon=True).start()
 
-YOUTUBE_API_KEY = "AIzaSyCPwlgw_CQuTHmjUkfeXutcnf54Wl9nNs8"  # <--- put your key here
+YOUTUBE_API_KEY = "YOUR_API_KEY_HERE"  # <--- put your key here
+
+# 🎵 Function to download audio using pytube
+def download_audio(video_url, video_id):
+    yt = YouTube(video_url)
+    audio_stream = yt.streams.filter(only_audio=True).first()
+    temp_path = f"static/audio/{video_id}.mp4"  # First save as mp4
+    final_path = f"static/audio/{video_id}.mp3"  # Will convert to mp3
+
+    if not os.path.exists(final_path):  # If already converted, no need
+        if not os.path.exists(temp_path):
+            audio_stream.download(output_path="static/audio", filename=f"{video_id}.mp4")
+
+        # Convert to mp3 using ffmpeg
+        stream = ffmpeg.input(temp_path)
+        stream = ffmpeg.output(stream, final_path, format='mp3', acodec='libmp3lame')
+        ffmpeg.run(stream, overwrite_output=True)
+
+        # After conversion, delete the .mp4 temp file
+        os.remove(temp_path)
+
+    return final_path
 
 @app.get("/search")
 def search_music(query: str):
@@ -63,32 +86,14 @@ def search_music(query: str):
     video_id = results["items"][0]["id"]["videoId"]
     title = results["items"][0]["snippet"]["title"]
 
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+
     # 2. Download audio
-    output_dir = "static/audio"
-    os.makedirs(output_dir, exist_ok=True)
-
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': f'{output_dir}/{video_id}.mp3',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'noplaylist': True,
-        'quiet': True,
-    }
-
-    filepath = f'{output_dir}/{video_id}.mp3'
-    
-    if not os.path.exists(filepath):  # Download only if not already downloaded
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+    download_audio(video_url, video_id)
 
     # 3. Return audio file URL
     return {
-        "title": title,
-        "audio_url": f"/static/audio/{video_id}.mp3"
-    }
+    "title": title,
+    "audio_url": f"/static/audio/{video_id}.mp3"  # Now it’s truly .mp3!
+}
 
-# Run with: uvicorn main:app --reload
