@@ -1,7 +1,8 @@
 import os
 import time
 import threading
-from flask import Flask, request, jsonify, send_file, abort, CORS
+from flask import Flask, request, jsonify, send_file, abort
+from flask_cors import CORS  # ✅ Correct
 from pytube import Search, YouTube
 from pydub import AudioSegment
 
