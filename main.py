@@ -70,25 +70,26 @@ def fetch_youtube_data(query, retries=3, delay=5):
 
 # 🎵 Function to download audio using pytube
 def download_audio(video_url, video_id):
-    yt = YouTube(video_url)
-    audio_stream = yt.streams.filter(only_audio=True).first()
-    temp_path = f"static/audio/{video_id}.mp4"  # First save as mp4
-    final_path = f"static/audio/{video_id}.mp3"  # Will convert to mp3
+    try:
+        yt = YouTube(video_url)
+        audio_stream = yt.streams.filter(only_audio=True).first()
+        temp_path = f"static/audio/{video_id}.mp4"  # First save as mp4
+        final_path = f"static/audio/{video_id}.mp3"  # Will convert to mp3
 
-    if not os.path.exists(final_path):  # If already converted, no need
-        if not os.path.exists(temp_path):
-            audio_stream.download(output_path="static/audio", filename=f"{video_id}.mp4")
+        if not os.path.exists(final_path):  # If already converted, no need
+            if not os.path.exists(temp_path):
+                audio_stream.download(output_path="static/audio", filename=f"{video_id}.mp4")
 
-        # Convert to mp3 using ffmpeg
-        stream = ffmpeg.input(temp_path)
-        stream = ffmpeg.output(stream, final_path, format='mp3', acodec='libmp3lame')
-        ffmpeg.run(stream, overwrite_output=True)
+            # Convert to mp3 using ffmpeg
+            stream = ffmpeg.input(temp_path)
+            stream = ffmpeg.output(stream, final_path, format='mp3', acodec='libmp3lame')
+            ffmpeg.run(stream, overwrite_output=True)
 
-        # After conversion, delete the .mp4 temp file
-        os.remove(temp_path)
+            # After conversion, delete the .mp4 temp file
+            os.remove(temp_path)
 
-    return final_path
- except Exception as e:
+        return final_path
+    except Exception as e:
         print(f"Error downloading audio: {e}")
         raise  # Re-raise the exception to trigger a 500 error response
 
