@@ -1,66 +1,62 @@
-from flask import Flask, request, send_file, jsonify
-from pytube import YouTube, Search
+from flask import Flask, Response, request, send_file
+import yt_dlp
 import os
 import threading
 import time
 import uuid
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Allow requests from anywhere
 
-DOWNLOAD_FOLDER = 'downloads'
-if not os.path.exists(DOWNLOAD_FOLDER):
-    os.makedirs(DOWNLOAD_FOLDER)
+TMP_FOLDER = '/tmp'
 
-def delete_file_later(filepath, delay=600):
-    def delete():
-        time.sleep(delay)
+def download_audio(query):
+    filename = f"{uuid.uuid4()}.mp3"
+    filepath = os.path.join(TMP_FOLDER, filename)
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': filepath,
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'quiet': True,
+        'default_search': 'ytsearch1',
+        'noplaylist': True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([query])
+
+    return filepath
+
+def schedule_file_deletion(filepath, delay_seconds=600):
+    def delete_file():
+        time.sleep(delay_seconds)
         if os.path.exists(filepath):
             os.remove(filepath)
-            print(f"Deleted: {filepath}")
-    threading.Thread(target=delete).start()
+            print(f"Deleted {filepath}")
+    threading.Thread(target=delete_file, daemon=True).start()
 
-@app.route('/download', methods=['POST'])
-def download_audio():
-    data = request.json
-    query = data.get('query')
-
+@app.route('/stream')
+def stream():
+    query = request.args.get('query')
     if not query:
-        return jsonify({'error': 'No query provided.'}), 400
+        return {"error": "Missing query"}, 400
 
     try:
-        # Search and get the first result
-        search = Search(query)
-        video = search.results[0]
-
-        # Download audio
-        yt = YouTube(video.watch_url)
-        audio_stream = yt.streams.filter(only_audio=True).first()
-
-        filename = f"{uuid.uuid4()}.mp3"
-        filepath = os.path.join(DOWNLOAD_FOLDER, filename)
-
-        audio_stream.download(output_path=DOWNLOAD_FOLDER, filename=filename)
-
-        # Schedule file deletion
-        delete_file_later(filepath)
-
-        # Return file URL
-        return jsonify({'file_url': f"/file/{filename}"})
-
+        filepath = download_audio(query)
+        schedule_file_deletion(filepath, delay_seconds=600)  # Delete after 10 min
+        return send_file(filepath, mimetype='audio/mpeg')
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/file/<filename>')
-def serve_file(filename):
-    filepath = os.path.join(DOWNLOAD_FOLDER, filename)
-    if os.path.exists(filepath):
-        return send_file(filepath, mimetype='audio/mp3')
-    else:
-        return jsonify({'error': 'File not found.'}), 404
+        return {"error": str(e)}, 500
 
 @app.route('/')
 def home():
-    return "Server is running!"
+    return "YouTube MP3 Streamer is running!"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    app.run(host="0.0.0.0", port=10000)
